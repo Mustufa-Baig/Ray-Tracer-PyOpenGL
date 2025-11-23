@@ -13,7 +13,7 @@ class App:
 		self.shader=self.createShader("shaders/vertex.txt","shaders/fragment.txt")
 		glUseProgram(self.shader)
 
-		self.triangle=Triangle()
+		#self.triangle=Triangle()
 		self.quad=Quad()
 		self.mainloop()
 
@@ -51,7 +51,7 @@ class App:
 			pygame.display.flip()
 			self.clock.tick(60)
 
-		self.triangle.destroy()
+		#self.triangle.destroy()
 		self.quad.destroy()
 
 		glDeleteProgram(self.shader)
@@ -63,13 +63,13 @@ class Quad:
         # Two triangles forming a quad
         self.vertices = numpy.array([
             # pos               # color
-            -0.5, -0.5, 0.0,     1.0, 1.0, 0.0,
-             0.5, -0.5, 0.0,     0.0, 1.0, 1.0,
-             0.5,  0.5, 0.0,     1.0, 0.0, 1.0,
+            -1.0, -1.0, 0.0,     1.0, 1.0, 0.0,
+             1.0, -1.0, 0.0,     0.0, 1.0, 1.0,
+             1.0,  1.0, 0.0,     1.0, 0.0, 1.0,
 
-            -0.5, -0.5, 0.0,     1.0, 1.0, 0.0,
-             0.5,  0.5, 0.0,     1.0, 0.0, 1.0,
-            -0.5,  0.5, 0.0,     0.0, 1.0, 0.0,
+            -1.0, -1.0, 0.0,     1.0, 1.0, 0.0,
+             1.0,  1.0, 0.0,     1.0, 0.0, 1.0,
+            -1.0,  1.0, 0.0,     0.0, 1.0, 0.0,
         ], dtype=numpy.float32)
 
         self.vertex_count = 6
