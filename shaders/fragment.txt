@@ -1,10 +1,41 @@
 #version 330 core
 
-in vec3 fragmentColor;
+in vec3 fragmentColor; 
 
 out vec4 color;
 
+uniform vec2 u_center;   
+uniform float u_zoom;   
+uniform int u_maxIter;  
+
+vec3 palette(float t)
+{
+    float v = 0.5 + sin(6.2831 * t);
+    return vec3(v*0.4);
+}
+
+
 void main()
 {
-	color = vec4(fragmentColor,1.0);
+    float x = (gl_FragCoord.x / 700.0 - 0.5) * u_zoom + u_center.x;
+    float y = (gl_FragCoord.y / 400.0 - 0.5) * u_zoom + u_center.y;
+
+    float zx = 0.0;
+    float zy = 0.0;
+
+    int iter = 0;
+
+    while (zx*zx + zy*zy < 4.0 && iter < u_maxIter)
+    {
+        float xtemp = zx*zx - zy*zy + x;
+        zy = 2.0*zx*zy + y;
+        zx = xtemp;
+
+        iter++;
+    }
+
+    if (iter == u_maxIter)
+        color = vec4(0.0, 0.0, 0.0, 1.0);       
+    else
+        color = vec4(palette(iter / float(u_maxIter)), 1.0);
 }
