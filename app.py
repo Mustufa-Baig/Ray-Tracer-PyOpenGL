@@ -13,20 +13,6 @@ class App:
 		self.shader=self.createShader("shaders/vertex.txt","shaders/fragment.txt")
 		glUseProgram(self.shader)
 
-		self.center = [ -0.5, 0.0 ]  
-		self.zoom = 3.0              
-		self.max_iter = 200
-
-		self.loc_center = glGetUniformLocation(self.shader, "u_center")
-		self.loc_zoom   = glGetUniformLocation(self.shader, "u_zoom")
-		self.loc_iter   = glGetUniformLocation(self.shader, "u_maxIter")
-
-		
-		glUniform2fv(self.loc_center, 1, numpy.array(self.center, dtype=numpy.float32))
-		glUniform1f(self.loc_zoom, float(self.zoom))
-		glUniform1i(self.loc_iter, int(self.max_iter))
-
-
 		#self.triangle=Triangle()
 		self.quad=Quad()
 		self.mainloop()
