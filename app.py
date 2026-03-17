@@ -4,10 +4,12 @@ import numpy
 import ctypes
 from OpenGL.GL.shaders import compileShader,compileProgram
 
+WIDTH,HEIGHT=700,400
+
 class App:
 	def __init__(self):
 		pygame.init()
-		pygame.display.set_mode((700,400),pygame.OPENGL|pygame.DOUBLEBUF)
+		pygame.display.set_mode((WIDTH,HEIGHT),pygame.OPENGL|pygame.DOUBLEBUF)
 		self.clock=pygame.time.Clock()
 		glClearColor(0.1,0.1,0.1,1)
 		self.shader=self.createShader("shaders/vertex.txt","shaders/fragment.txt")
@@ -42,6 +44,8 @@ class App:
 
 			glUseProgram(self.shader)
 
+			res_addr=glGetUniformLocation(self.shader,"u_resolution")
+			glUniform2f(res_addr,WIDTH,HEIGHT)
 			#glBindVertexArray(self.triangle.vao)
 			#glDrawArrays(GL_TRIANGLES,0,self.triangle.vertex_count)
 			
