@@ -12,6 +12,11 @@ struct Sphere {
 	vec3 materialColor;
 };
 
+struct Plane {
+	vec3 normal;
+	float d;
+};
+
 float hitSphere(vec3 center, float radius, vec3 ro, vec3 rd) {
     vec3 oc = ro - center;
     
@@ -21,10 +26,19 @@ float hitSphere(vec3 center, float radius, vec3 ro, vec3 rd) {
     
     if (discriminant > 0.0) {
         return -b - sqrt(discriminant);
-    }
-    
+    }    
     return -1.0;
 }
+
+float hitPlane(Plane p, vec3 ro, vec3 rd) {
+    float denom = dot(rd, p.normal);
+    if (denom < -0.0001) { 
+        float t = -(dot(ro, p.normal) + p.d) / denom;
+        if (t > 0.0) return t;
+    }
+    return -1.0;
+}
+
 
 void main()
 {
@@ -44,30 +58,48 @@ void main()
     spheres[1] = Sphere(vec3(2.0, 0.0, 1.0), 1.0, vec3(0.0, 1.0, 0.0)); 
     spheres[2] = Sphere(vec3(-2.0, 0.0, -1.0), 1.0, vec3(0.0, 0.5, 1.0));
 
+    Plane floorPlane = Plane(vec3(0.0, 1.0, 0.0), 1.0);
+
     float closest_t = 999999.0; 
+    int hit_type = 0;
     int hit_index = -1;         
 
     for (int i = 0; i < NUM_SPHERES; i++) {
         float t = hitSphere(spheres[i].center, spheres[i].radius, cam_pos, cam_dir);
-        
         if (t > 0.0 && t < closest_t) {
             closest_t = t;
+            hit_type=1;
             hit_index = i;
         }
     }
 
-    if (hit_index != -1) {
+	float t_plane = hitPlane(floorPlane, cam_pos, cam_dir);
+	if (t_plane > 0.0 && t_plane < closest_t) {
+		closest_t = t_plane;
+		hit_type = 2; 
+	}
+
+
+    if (hit_type == 1) {
         vec3 hitPoint = cam_pos + cam_dir * closest_t;
         vec3 normal = normalize(hitPoint - spheres[hit_index].center);
         vec3 lightDir = normalize(vec3(1.0, -1.0, 1.0));
-        
         float diffuse = max(dot(normal, -lightDir), 0.0);
         
         vec3 baseColor = spheres[hit_index].materialColor;
-        vec3 finalColor = baseColor * diffuse + (baseColor * 0.15); // Diffuse + Ambient
+        color = vec4(baseColor * diffuse + (baseColor * 0.15), 1.0);
         
-        color = vec4(finalColor, 1.0);
+    } else if (hit_type == 2) {
+        vec3 hitPoint = cam_pos + cam_dir * closest_t;
+        vec3 normal = floorPlane.normal;
+        vec3 lightDir = normalize(vec3(1.0, -1.0, 1.0));
+        float diffuse = max(dot(normal, -lightDir), 0.0);
+        
+        float checker = mod(floor(hitPoint.x) + floor(hitPoint.z), 2.0);
+        vec3 baseColor = mix(vec3(0.2), vec3(0.7), checker); 
+        
+        color = vec4(baseColor * diffuse + (baseColor * 0.15), 1.0);
     } else {
-        color = vec4(0.1, 0.1, 0.1, 1.0); // Background color
+        color = vec4(0.1, 0.1, 0.1, 1.0); 
     }
 }
