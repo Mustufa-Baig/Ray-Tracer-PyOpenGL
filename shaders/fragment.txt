@@ -59,80 +59,84 @@ float hitPlane(Plane p, vec3 ro, vec3 rd) {
 void main()
 {
 	seed = dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + u_time;
-	
-	vec2 uv= gl_FragCoord.xy / u_resolution.xy;
-	uv=(uv*2.0) -1.0;
-	uv.x *= u_resolution.x/u_resolution.y;
-
-
-	vec3 cam_pos = vec3(0.0, 0.0, -3.0); 
-	vec3 cam_dir = normalize(vec3(uv, 1.0)); 
-
 
     const int NUM_SPHERES = 10;
     Sphere spheres[NUM_SPHERES];
-    
+
     spheres[2] = Sphere(vec3(-2.0, 0.0, -1.0), 1.0, vec3(0.0, 0.5, 1.0),0.1);
     spheres[0] = Sphere(vec3(0.0, 0.0, 0.0), 1.0, vec3(1.0, 1.0, 1.0),0.8); 
     spheres[1] = Sphere(vec3(2.0, 0.0, 1.0), 1.0, vec3(0.0, 1.0, 0.0),0.2); 
 
     Plane floorPlane = Plane(vec3(0.0, 1.0, 0.0), 1.0);
 
-    vec3 finalColor = vec3(0.0);
-    vec3 reflectionMultiplier = vec3(1.0);
-    const int MAX_BOUNCES=3;
 
-    for (int bounce = 0; bounce < MAX_BOUNCES; bounce++) {
-	    float closest_t = 999999.0; 
-	    int hit_type = 0;
-	    int hit_index = -1;         
+    const int NUM_SAMPLES = 20;
+   	vec3 totalColor = vec3(0.0);
+	for (int s = 0; s < NUM_SAMPLES; s++) {
+		vec2 jitter = vec2(random() - 0.5, random() - 0.5);
+		vec2 uv= (gl_FragCoord.xy +jitter)/ u_resolution.xy;
+		uv=(uv*2.0) -1.0;
+		uv.x *= u_resolution.x/u_resolution.y;
 
-	    for (int i = 0; i < NUM_SPHERES; i++) {
-	        float t = hitSphere(spheres[i].center, spheres[i].radius, cam_pos, cam_dir);
-	        if (t > 0.0 && t < closest_t) {
-	            closest_t = t;
-	            hit_type=1;
-	            hit_index = i;
+
+		vec3 cam_pos = vec3(0.0, 0.0, -3.0); 
+		vec3 cam_dir = normalize(vec3(uv, 1.0)); 
+
+		vec3 sampleColor = vec3(0.0);
+	    vec3 reflectionMultiplier = vec3(1.0);
+
+	    const int MAX_BOUNCES=20;
+	    for (int bounce = 0; bounce < MAX_BOUNCES; bounce++) {
+		    float closest_t = 999999.0; 
+		    int hit_type = 0;
+		    int hit_index = -1;         
+
+		    for (int i = 0; i < NUM_SPHERES; i++) {
+		        float t = hitSphere(spheres[i].center, spheres[i].radius, cam_pos, cam_dir);
+		        if (t > 0.0 && t < closest_t) {
+		            closest_t = t;
+		            hit_type=1;
+		            hit_index = i;
+		        }
+		    }
+
+			float t_plane = hitPlane(floorPlane, cam_pos, cam_dir);
+			if (t_plane > 0.0 && t_plane < closest_t) {
+				closest_t = t_plane;
+				hit_type = 2; 
+			}
+
+			if (hit_type == 0) {
+				sampleColor += reflectionMultiplier * vec3(0.8, 0.8, 0.8);
+	            break;
+			}
+			vec3 hitPoint = cam_pos + cam_dir * closest_t;
+	        vec3 normal;
+	        vec3 baseColor;
+	        float currentRoughness;
+
+	        if (hit_type == 1) {
+	            normal = normalize(hitPoint - spheres[hit_index].center);
+	            baseColor = spheres[hit_index].materialColor;
+	            currentRoughness = spheres[hit_index].roughness;
+	        } else {
+	            normal = floorPlane.normal;
+	            float checker = mod(floor(hitPoint.x) + floor(hitPoint.z), 2.0);
+	            baseColor = mix(vec3(0.2), vec3(0.7), checker); 
+	            currentRoughness = 0.5; 
+	        }
+	        reflectionMultiplier *= baseColor;
+	        
+			cam_pos = hitPoint + normal * 0.001; 
+	        
+	        vec3 pureReflection = reflect(cam_dir, normal);
+	        cam_dir = normalize(pureReflection + randomUnitVector() * currentRoughness);
+	        
+	        if (dot(cam_dir, normal) < 0.0) {
+	            cam_dir = normalize(cam_dir + normal);
 	        }
 	    }
-
-		float t_plane = hitPlane(floorPlane, cam_pos, cam_dir);
-		if (t_plane > 0.0 && t_plane < closest_t) {
-			closest_t = t_plane;
-			hit_type = 2; 
-		}
-
-		if (hit_type == 0) {
-			finalColor += reflectionMultiplier * vec3(0.8, 0.8, 0.8);
-            break;
-		}
-		vec3 hitPoint = cam_pos + cam_dir * closest_t;
-        vec3 normal;
-        vec3 baseColor;
-        float currentRoughness;
-
-        if (hit_type == 1) {
-            normal = normalize(hitPoint - spheres[hit_index].center);
-            baseColor = spheres[hit_index].materialColor;
-            currentRoughness = spheres[hit_index].roughness;
-        } else {
-            normal = floorPlane.normal;
-            float checker = mod(floor(hitPoint.x) + floor(hitPoint.z), 2.0);
-            baseColor = mix(vec3(0.2), vec3(0.7), checker); 
-            currentRoughness = 0.5; 
-        }
-        reflectionMultiplier *= baseColor;
-        
-		cam_pos = hitPoint + normal * 0.001; 
-        
-        vec3 pureReflection = reflect(cam_dir, normal);
-        
-        cam_dir = normalize(pureReflection + randomUnitVector() * currentRoughness);
-        
-        
-        if (dot(cam_dir, normal) < 0.0) {
-            cam_dir = normalize(cam_dir + normal);
-        }
-    }
-	color = vec4(finalColor, 1.0);
+		totalColor += sampleColor;
+	}
+	color = vec4(totalColor / float(NUM_SAMPLES), 1.0);
 }
