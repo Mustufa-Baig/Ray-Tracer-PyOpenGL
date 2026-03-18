@@ -5,12 +5,27 @@ in vec3 fragmentColor;
 out vec4 color;
 
 uniform vec2 u_resolution;
+uniform float u_time;
+
+float seed; 
+
+float random() {
+	seed = fract(sin(seed) * 43758.5453123);
+	return seed;
+}
+
+vec3 randomUnitVector() {
+	float z = random() * 2.0 - 1.0;
+	float a = random() * 6.28318530718;
+	float r = sqrt(1.0 - z * z);
+	return vec3(r * cos(a), r * sin(a), z);
+}
 
 struct Sphere {
 	vec3 center;
 	float radius;
 	vec3 materialColor;
-	float reflectivity;
+	float roughness;
 };
 
 struct Plane {
@@ -43,6 +58,8 @@ float hitPlane(Plane p, vec3 ro, vec3 rd) {
 
 void main()
 {
+	seed = dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + u_time;
+	
 	vec2 uv= gl_FragCoord.xy / u_resolution.xy;
 	uv=(uv*2.0) -1.0;
 	uv.x *= u_resolution.x/u_resolution.y;
@@ -52,12 +69,12 @@ void main()
 	vec3 cam_dir = normalize(vec3(uv, 1.0)); 
 
 
-    const int NUM_SPHERES = 3;
+    const int NUM_SPHERES = 10;
     Sphere spheres[NUM_SPHERES];
     
-    spheres[2] = Sphere(vec3(-2.0, 0.0, -1.0), 1.0, vec3(0.0, 0.5, 1.0),0.85);
-    spheres[0] = Sphere(vec3(0.0, 0.0, 0.0), 1.0, vec3(1.0, 0.0, 0.0),0.2); 
-    spheres[1] = Sphere(vec3(2.0, 0.0, 1.0), 1.0, vec3(0.0, 1.0, 0.0),0.7); 
+    spheres[2] = Sphere(vec3(-2.0, 0.0, -1.0), 1.0, vec3(0.0, 0.5, 1.0),0.1);
+    spheres[0] = Sphere(vec3(0.0, 0.0, 0.0), 1.0, vec3(1.0, 1.0, 1.0),0.8); 
+    spheres[1] = Sphere(vec3(2.0, 0.0, 1.0), 1.0, vec3(0.0, 1.0, 0.0),0.2); 
 
     Plane floorPlane = Plane(vec3(0.0, 1.0, 0.0), 1.0);
 
@@ -86,34 +103,36 @@ void main()
 		}
 
 		if (hit_type == 0) {
-			finalColor += reflectionMultiplier * vec3(0.1, 0.1, 0.1);
+			finalColor += reflectionMultiplier * vec3(0.8, 0.8, 0.8);
             break;
 		}
 		vec3 hitPoint = cam_pos + cam_dir * closest_t;
         vec3 normal;
         vec3 baseColor;
-        float currentReflectivity;
+        float currentRoughness;
 
         if (hit_type == 1) {
             normal = normalize(hitPoint - spheres[hit_index].center);
             baseColor = spheres[hit_index].materialColor;
-            currentReflectivity = spheres[hit_index].reflectivity;
+            currentRoughness = spheres[hit_index].roughness;
         } else {
             normal = floorPlane.normal;
             float checker = mod(floor(hitPoint.x) + floor(hitPoint.z), 2.0);
             baseColor = mix(vec3(0.2), vec3(0.7), checker); 
-            currentReflectivity = 0.3; 
+            currentRoughness = 0.5; 
         }
-
-	    vec3 lightDir = normalize(vec3(1.0, -1.0, 1.0));
-        float diffuse = max(dot(normal, -lightDir), 0.0);
-        vec3 directLight = baseColor * diffuse + (baseColor * 0.15);
+        reflectionMultiplier *= baseColor;
         
-        finalColor += reflectionMultiplier * directLight * (1.0 - currentReflectivity);
-        reflectionMultiplier *= currentReflectivity;
+		cam_pos = hitPoint + normal * 0.001; 
         
-        cam_pos = hitPoint + normal * 0.001; 
-        cam_dir = reflect(cam_dir, normal); 
-	}
+        vec3 pureReflection = reflect(cam_dir, normal);
+        
+        cam_dir = normalize(pureReflection + randomUnitVector() * currentRoughness);
+        
+        
+        if (dot(cam_dir, normal) < 0.0) {
+            cam_dir = normalize(cam_dir + normal);
+        }
+    }
 	color = vec4(finalColor, 1.0);
 }

@@ -45,7 +45,11 @@ class App:
 			glUseProgram(self.shader)
 
 			res_addr=glGetUniformLocation(self.shader,"u_resolution")
+			time_addr=glGetUniformLocation(self.shader,"u_time")
+
+			current_time=pygame.time.get_ticks()/1000.0
 			glUniform2f(res_addr,WIDTH,HEIGHT)
+			glUniform1f(time_addr,current_time)
 			#glBindVertexArray(self.triangle.vao)
 			#glDrawArrays(GL_TRIANGLES,0,self.triangle.vertex_count)
 			
