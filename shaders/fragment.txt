@@ -7,6 +7,10 @@ uniform vec2 u_resolution;
 uniform float u_frameCount; 
 uniform sampler2D u_accumTexture; 
 
+uniform vec3 u_camPos;
+uniform vec3 u_camForward;
+uniform vec3 u_camRight;
+uniform vec3 u_camUp;
 
 float seed; 
 
@@ -81,8 +85,8 @@ void main()
         uv = uv * 2.0 - 1.0;
         uv.x *= u_resolution.x / u_resolution.y;
 
-        vec3 ro = vec3(0.0, 0.0, -3.0); 
-        vec3 rd = normalize(vec3(uv, 1.0)); 
+        vec3 cam_pos = u_camPos; 
+        vec3 cam_dir = normalize(uv.x * u_camRight + uv.y * u_camUp + u_camForward);
 
         vec3 finalColor = vec3(0.0);
         vec3 reflectionMultiplier = vec3(1.0); 
@@ -96,7 +100,7 @@ void main()
 
             
             for (int i = 0; i < NUM_SPHERES; i++) {
-                float t = hitSphere(spheres[i].center, spheres[i].radius, ro, rd);
+                float t = hitSphere(spheres[i].center, spheres[i].radius, cam_pos, cam_dir);
                 if (t > 0.0 && t < closest_t) {
                     closest_t = t;
                     hit_type = 1;
@@ -105,7 +109,7 @@ void main()
             }
 
             
-            float t_plane = hitPlane(floorPlane, ro, rd);
+            float t_plane = hitPlane(floorPlane, cam_pos, cam_dir);
             if (t_plane > 0.0 && t_plane < closest_t) {
                 closest_t = t_plane;
                 hit_type = 2; 
@@ -118,7 +122,7 @@ void main()
             }
 
             
-            vec3 hitPoint = ro + rd * closest_t;
+            vec3 hitPoint = cam_pos + cam_dir * closest_t;
             vec3 normal;
             vec3 baseColor;
             float currentRoughness;
@@ -138,15 +142,15 @@ void main()
             reflectionMultiplier *= baseColor; 
             
             
-            ro = hitPoint + normal * 0.001; 
+            cam_pos = hitPoint + normal * 0.001; 
             
             
-            vec3 pureReflection = reflect(rd, normal);
-            rd = normalize(pureReflection + randomUnitVector() * currentRoughness);
+            vec3 pureReflection = reflect(cam_dir, normal);
+            cam_dir = normalize(pureReflection + randomUnitVector() * currentRoughness);
             
             
-            if (dot(rd, normal) < 0.0) {
-                rd = normalize(rd + normal);
+            if (dot(cam_dir, normal) < 0.0) {
+                cam_dir = normalize(cam_dir + normal);
             }
         }
         

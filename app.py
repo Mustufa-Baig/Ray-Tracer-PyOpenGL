@@ -1,6 +1,6 @@
 import pygame
 from OpenGL.GL import *
-import numpy
+import numpy,math
 import ctypes
 from OpenGL.GL.shaders import compileShader,compileProgram
 
@@ -31,6 +31,10 @@ class App:
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.textures[i], 0)
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0)
+
+		self.cam_pos = numpy.array([0.0, 0.0, -3.0], dtype=numpy.float32)
+		self.cam_yaw = 0.0 
+		self.cam_pitch = 0.0
 		self.mainloop()
 
 	def createShader(self,vertex_path,fragment_path):
@@ -53,18 +57,56 @@ class App:
 		res_addr =glGetUniformLocation(self.shader,"u_resolution")
 		frame_addr = glGetUniformLocation(self.shader, "u_frameCount")
 		accum_tex_addr = glGetUniformLocation(self.shader, "u_accumTexture")
+		cam_pos_addr = glGetUniformLocation(self.shader, "u_camPos")
+		cam_fwd_addr = glGetUniformLocation(self.shader, "u_camForward")
+		cam_rgt_addr = glGetUniformLocation(self.shader, "u_camRight")
+		cam_up_addr = glGetUniformLocation(self.shader, "u_camUp")
 
 		while run:
 			for event in pygame.event.get():
 				if event.type==pygame.QUIT:
 					run=False
+		
+			keys = pygame.key.get_pressed()
+			moved = False
+			speed = 0.05
+			rot_speed = 0.02
+
+			if keys[pygame.K_LEFT]:  self.cam_yaw -= rot_speed; moved = True
+			if keys[pygame.K_RIGHT]: self.cam_yaw += rot_speed; moved = True
+			if keys[pygame.K_UP]:    self.cam_pitch += rot_speed; moved = True
+			if keys[pygame.K_DOWN]:  self.cam_pitch -= rot_speed; moved = True
+
+			self.cam_pitch = max(-math.pi/2.1, min(math.pi/2.1, self.cam_pitch))
+
+			cp = math.cos(self.cam_pitch)
+			sp = math.sin(self.cam_pitch)
+			cy = math.cos(self.cam_yaw)
+			sy = math.sin(self.cam_yaw)
+
+			forward = numpy.array([sy * cp, sp, cy * cp], dtype=numpy.float32)
+			right = numpy.array([cy, 0.0, -sy], dtype=numpy.float32)
+			up = numpy.cross(forward,right)
+
+			if keys[pygame.K_w]: self.cam_pos += forward * speed; moved = True
+			if keys[pygame.K_s]: self.cam_pos -= forward * speed; moved = True
+			if keys[pygame.K_d]: self.cam_pos += right * speed; moved = True
+			if keys[pygame.K_a]: self.cam_pos -= right * speed; moved = True
+			if keys[pygame.K_e]: self.cam_pos += up * speed; moved = True
+			if keys[pygame.K_q]: self.cam_pos -= up * speed; moved = True
+
+			if moved:
+			    self.frame_count = 0
 
 			read_idx = self.frame_count % 2
 			write_idx = (self.frame_count + 1) % 2
 
+			glUniform3fv(cam_pos_addr, 1, self.cam_pos)
+			glUniform3fv(cam_fwd_addr, 1, forward)
+			glUniform3fv(cam_rgt_addr, 1, right)
+			glUniform3fv(cam_up_addr, 1, up)
 			
 			glBindFramebuffer(GL_FRAMEBUFFER, self.fbos[write_idx])
-
 			glUseProgram(self.shader)
 			
 			glUniform2f(res_addr, WIDTH, HEIGHT)
