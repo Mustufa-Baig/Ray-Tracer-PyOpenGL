@@ -32,10 +32,23 @@ class App:
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
+		self.env_texture = self.load_texture("hdri.png")
 		self.cam_pos = numpy.array([0.0, 0.0, -3.0], dtype=numpy.float32)
 		self.cam_yaw = 0.0 
 		self.cam_pitch = 0.0
 		self.mainloop()
+	
+	def load_texture(self, filepath):
+		surface = pygame.image.load(filepath).convert()
+		data = pygame.image.tostring(surface, "RGB", True)
+
+		tex = glGenTextures(1)
+		glBindTexture(GL_TEXTURE_2D, tex)
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, surface.get_width(), surface.get_height(), 0, GL_RGB, GL_UNSIGNED_BYTE, data)
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+		return tex
 
 	def createShader(self,vertex_path,fragment_path):
 		with open(vertex_path,'r') as file:
@@ -116,6 +129,11 @@ class App:
 			glBindTexture(GL_TEXTURE_2D, self.textures[read_idx])
 			glUniform1i(accum_tex_addr, 0)
 
+
+			glActiveTexture(GL_TEXTURE1)
+			glBindTexture(GL_TEXTURE_2D, self.env_texture)
+			env_tex_addr = glGetUniformLocation(self.shader, "u_environmentMap")
+			glUniform1i(env_tex_addr, 1)
 			
 			glBindVertexArray(self.quad.vao)
 			glDrawArrays(GL_TRIANGLES, 0, self.quad.vertex_count)

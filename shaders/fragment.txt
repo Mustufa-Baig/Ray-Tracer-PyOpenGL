@@ -11,6 +11,14 @@ uniform vec3 u_camPos;
 uniform vec3 u_camForward;
 uniform vec3 u_camRight;
 uniform vec3 u_camUp;
+uniform sampler2D u_environmentMap; 
+
+vec2 getSphericalUV(vec3 v) {
+    vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
+    uv *= vec2(0.1591, 0.3183); 
+    uv += 0.5;
+    return uv;
+}
 
 float seed; 
 
@@ -115,11 +123,11 @@ void main()
                 hit_type = 2; 
             }
 
-            
             if (hit_type == 0) {
-                finalColor += reflectionMultiplier * vec3(0.8, 0.8, 0.8);
-                break; 
-            }
+	            vec3 envColor = texture(u_environmentMap, getSphericalUV(cam_dir)).rgb * 1.5;
+	            finalColor += reflectionMultiplier * envColor;
+	            break; 
+	        }
 
             
             vec3 hitPoint = cam_pos + cam_dir * closest_t;
